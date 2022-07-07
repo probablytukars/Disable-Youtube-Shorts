@@ -1,5 +1,4 @@
 'use strict';
-
 var observeDOM = (function(){
 	var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
 	return function( obj, callback ){
@@ -15,7 +14,6 @@ var observeDOM = (function(){
 		}
 	}
 })()
-
 function updateShortsAnchor(anchor) {
 	var href = anchor.href;
 	if (href.includes("/shorts/")) {
@@ -29,22 +27,28 @@ function updateShortsAnchor(anchor) {
 		}
 	}
 }
-
-function processNode(node) {
-	if (node.tagName == "A") {updateShortsAnchor(node)}
-	else if (node.tagName == "ytd-thumbnail-overlay-time-status-renderer".toUpperCase() && node.getAttribute("overlay-style") == "SHORTS") {node.style.display = "none"}
-}
-
-observeDOM(document.body, function(m){m.forEach(record => record.addedNodes.length & record.addedNodes.forEach(processNode))})
-
+var lastElementUpdate = 0;
+var lastIntervalUpdate = 0;
+setInterval(function() {
+	var elTime = Date.now() - lastElementUpdate
+	var inTime = Date.now() - lastIntervalUpdate
+	if (elTime > 1 && inTime > elTime) {
+		lastIntervalUpdate = Date.now()
+		updateBody()
+	}
+}, 500)
 function updateBody() {
 	var shorts_overlay = document.querySelectorAll("ytd-thumbnail-overlay-time-status-renderer[overlay-style=SHORTS]")
 	for (var i = 0; i < shorts_overlay.length; ++i) {
-		if (shorts_overlay[i].getAttribute("overlay-style") == "SHORTS") {
-			shorts_overlay[i].style.display = "none"
-		}
+		shorts_overlay[i].style.cssText = "background-color: #a66 !important"
+		shorts_overlay[i].querySelector("yt-icon.ytd-thumbnail-overlay-time-status-renderer").style.cssText = "color: black !important"
 	}
 	var anchors = document.getElementsByTagName('a');
 	for (var i = 0; i < anchors.length; ++i) {updateShortsAnchor(anchors[i])}
 }
+
+var numberOfUpdates = 0;
+function recordNodeUpdate() {numberOfUpdates++; if (numberOfUpdates > 100) {updateBody() ; numberOfUpdates = 0}; lastElementUpdate = Date.now()} //prevent performance degredation
+
+observeDOM(document.body, function(m){m.forEach(record => record.addedNodes.length & record.addedNodes.forEach(recordNodeUpdate))})
 updateBody()
