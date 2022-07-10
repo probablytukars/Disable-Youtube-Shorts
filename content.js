@@ -1,4 +1,30 @@
 'use strict';
+var oldHref = document.location.href;
+window.onload = function() {
+	var bodyList = document.querySelector("body")
+	var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
+	if (MutationObserver) {
+		var observer = new MutationObserver(function(mutations) {
+			mutations.forEach(function() {
+				if (oldHref != document.location.href) {
+					oldHref = document.location.href;
+					onURLChange(document.location.href)
+				}
+			})
+		})
+	}
+	var config = {childList: true, subtree: true};
+	observer.observe(bodyList, config);
+}
+function onURLChange(newurl) {
+	if (newurl.includes("/shorts/")) {
+		var video_link = newurl.split('/')
+		var length = video_link.length
+		var link = "/watch?v=" + video_link[length-1]
+		window.location.replace(window.location.origin + link)
+	}
+}
+onURLChange(document.location.href)
 var observeDOM = (function(){
 	var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
 	return function( obj, callback ){
@@ -14,16 +40,22 @@ var observeDOM = (function(){
 		}
 	}
 })()
+
 function updateShortsAnchor(anchor) {
 	var href = anchor.href;
+	if (href.includes("/watch?v=")) {
+		var root = anchor.closest('ytd-video-renderer')
+		if (root) {if (root.querySelector('ytd-thumbnail-overlay-time-status-renderer[overlay-style=DEFAULT]')) {anchor.onclick = () => void 0}}
+	}
 	if (href.includes("/shorts/")) {
 		var video_link = href.split('/')
 		var length = video_link.length
-		anchor.href = "/watch?v="+video_link[length-1]
+		var link = "/watch?v=" + video_link[length-1]
+		anchor.href = link
 		anchor.onclick = function(event) {
 			event.preventDefault()
-			anchor.href = "/watch?v="+video_link[length-1]
-			window.location.replace(window.location.origin + "/watch?v="+video_link[length-1])
+			anchor.href = link
+			window.location.replace(window.location.origin + link)
 		}
 	}
 }
@@ -38,17 +70,11 @@ setInterval(function() {
 	}
 }, 500)
 function updateBody() {
-	var shorts_overlay = document.querySelectorAll("ytd-thumbnail-overlay-time-status-renderer[overlay-style=SHORTS]")
-	for (var i = 0; i < shorts_overlay.length; ++i) {
-		shorts_overlay[i].style.cssText = "background-color: #a66 !important"
-		shorts_overlay[i].querySelector("yt-icon.ytd-thumbnail-overlay-time-status-renderer").style.cssText = "color: black !important"
-	}
-	var anchors = document.getElementsByTagName('a');
-	for (var i = 0; i < anchors.length; ++i) {updateShortsAnchor(anchors[i])}
+	var anchors = document.querySelectorAll('a');
+	for (var i = 0; i < anchors.length; i++) {updateShortsAnchor(anchors[i])}
 }
-
 var numberOfUpdates = 0;
-function recordNodeUpdate() {numberOfUpdates++; if (numberOfUpdates > 100) {updateBody() ; numberOfUpdates = 0}; lastElementUpdate = Date.now()} //prevent performance degredation
-
+var maxUpdates = 200
+function recordNodeUpdate() {numberOfUpdates++; if (numberOfUpdates > maxUpdates - 1) {updateBody() ; numberOfUpdates = 0}; lastElementUpdate = Date.now()}
 observeDOM(document.body, function(m){m.forEach(record => record.addedNodes.length & record.addedNodes.forEach(recordNodeUpdate))})
 updateBody()
