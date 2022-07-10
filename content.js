@@ -100,7 +100,6 @@ observeDOM(document.body, function(m){m.forEach(record => record.addedNodes.leng
 updateBody()
 waitForElm('#endpoint[title=Shorts]').then((elm) => {
 	elm.onclick = function(event) {
-		console.log('shorts button clicked')
 		event.preventDefault()
 		window.location.replace(window.location.origin + "/hashtag/shorts")
 	}
