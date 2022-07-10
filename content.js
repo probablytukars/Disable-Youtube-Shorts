@@ -25,6 +25,27 @@ function onURLChange(newurl) {
 	}
 }
 onURLChange(document.location.href)
+function waitForElm(selector) {
+    return new Promise(resolve => {
+        if (document.querySelector(selector)) {
+            return resolve(document.querySelector(selector));
+        }
+		var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
+		if (MutationObserver) {
+			const observer = new MutationObserver(mutations => {
+				if (document.querySelector(selector)) {
+					resolve(document.querySelector(selector));
+					observer.disconnect();
+				}
+			});
+			observer.observe(document.body, {
+				childList: true,
+				subtree: true
+			});
+		}
+        
+    });
+}
 var observeDOM = (function(){
 	var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
 	return function( obj, callback ){
@@ -40,7 +61,6 @@ var observeDOM = (function(){
 		}
 	}
 })()
-
 function updateShortsAnchor(anchor) {
 	var href = anchor.href;
 	if (href.includes("/watch?v=")) {
@@ -78,3 +98,10 @@ var maxUpdates = 200
 function recordNodeUpdate() {numberOfUpdates++; if (numberOfUpdates > maxUpdates - 1) {updateBody() ; numberOfUpdates = 0}; lastElementUpdate = Date.now()}
 observeDOM(document.body, function(m){m.forEach(record => record.addedNodes.length & record.addedNodes.forEach(recordNodeUpdate))})
 updateBody()
+waitForElm('#endpoint[title=Shorts]').then((elm) => {
+	elm.onclick = function(event) {
+		console.log('shorts button clicked')
+		event.preventDefault()
+		window.location.replace(window.location.origin + "/hashtag/shorts")
+	}
+})
