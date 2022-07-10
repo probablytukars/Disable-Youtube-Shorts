@@ -1,6 +1,6 @@
 {
 	"manifest_version": 3,
-	"name": "Disable Youtube Shorts",
+	"name": "Disable Youtube Shorts Layout",
 	"description": "Disables youtube short layout on desktop (not the videos themselves).",
 	"version": "2.3",
 	"content_scripts": [
