@@ -1,106 +1,99 @@
-'use strict';
-var oldHref = document.location.href;
-window.onload = function() {
-	var bodyList = document.querySelector("body")
-	var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
-	if (MutationObserver) {
-		var observer = new MutationObserver(function(mutations) {
-			mutations.forEach(function() {
-				if (oldHref != document.location.href) {
-					oldHref = document.location.href;
-					onURLChange(document.location.href)
+'use strict'
+function getMutationObserver() {
+	var mutObserver = window.MutationObserver || window.WebKitMutationObserver;
+	return mutObserver
+}
+function createObserver(callback, where, search) {
+	var mutobs = getMutationObserver()
+	var observer = new mutobs(callback)
+	observer.observe(where, search)
+	return observer
+}
+function onURLChange() {
+	var newurl = document.location.href
+	if (newurl.includes("/shorts/")) {
+		var videoLink = newurl.split('/')
+		window.location.replace(window.location.origin + "/watch?v=" + videoLink[videoLink.length-1])
+	}
+}
+function onWindowLoad() {
+	var lastHref = document.location.href
+	window.onload = function () {
+		createObserver((m) => {
+			m.forEach(function() {
+				if (lastHref != document.location.href) {
+					lastHref = document.location.href
+					onURLChange()
 				}
 			})
-		})
-	}
-	var config = {childList: true, subtree: true};
-	observer.observe(bodyList, config);
-}
-function onURLChange(newurl) {
-	if (newurl.includes("/shorts/")) {
-		var video_link = newurl.split('/')
-		var length = video_link.length
-		var link = "/watch?v=" + video_link[length-1]
-		window.location.replace(window.location.origin + link)
+		}, document.body, {childList:true, subtree:true})
 	}
 }
-onURLChange(document.location.href)
 function waitForElm(selector) {
-    return new Promise(resolve => {
-        if (document.querySelector(selector)) {
+	return new Promise(resolve => {
+		if (document.querySelector(selector)) {
             return resolve(document.querySelector(selector));
         }
-		var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
-		if (MutationObserver) {
-			const observer = new MutationObserver(mutations => {
-				if (document.querySelector(selector)) {
-					resolve(document.querySelector(selector));
-					observer.disconnect();
-				}
-			});
-			observer.observe(document.body, {
-				childList: true,
-				subtree: true
-			});
-		}
-        
-    });
+		var observer = createObserver((m) => {
+			if (document.querySelector(selector)) {
+				resolve(document.querySelector(selector));
+				observer.disconnect();
+			}
+		}, document.body, {childList:true, subtree:true})
+	})
 }
-var observeDOM = (function(){
-	var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
-	return function( obj, callback ){
-		if( !obj || obj.nodeType !== 1 ) return;
-		if( MutationObserver ){
-			var mutationObserver = new MutationObserver(callback)
-			mutationObserver.observe( obj, { childList:true, subtree:true })
-			return mutationObserver
-		}
-		else if( window.addEventListener ){
-			obj.addEventListener('DOMNodeInserted', callback, false)
-			obj.addEventListener('DOMNodeRemoved', callback, false)
-		}
-	}
-})()
-function updateShortsAnchor(anchor) {
-	var href = anchor.href;
-	if (href.includes("/watch?v=")) {
-		var root = anchor.closest('ytd-video-renderer')
-		if (root) {if (root.querySelector('ytd-thumbnail-overlay-time-status-renderer[overlay-style=DEFAULT]')) {anchor.onclick = () => void 0}}
-	}
-	if (href.includes("/shorts/")) {
-		var video_link = href.split('/')
-		var length = video_link.length
-		var link = "/watch?v=" + video_link[length-1]
-		anchor.href = link
-		anchor.onclick = function(event) {
-			event.preventDefault()
-			anchor.href = link
-			window.location.replace(window.location.origin + link)
-		}
-	}
-}
-var lastElementUpdate = 0;
-var lastIntervalUpdate = 0;
-setInterval(function() {
-	var elTime = Date.now() - lastElementUpdate
-	var inTime = Date.now() - lastIntervalUpdate
-	if (elTime > 1 && inTime > elTime) {
-		lastIntervalUpdate = Date.now()
-		updateBody()
-	}
-}, 500)
 function updateBody() {
 	var anchors = document.querySelectorAll('a');
-	for (var i = 0; i < anchors.length; i++) {updateShortsAnchor(anchors[i])}
-}
-var numberOfUpdates = 0;
-var maxUpdates = 200
-function recordNodeUpdate() {numberOfUpdates++; if (numberOfUpdates > maxUpdates - 1) {updateBody() ; numberOfUpdates = 0}; lastElementUpdate = Date.now()}
-observeDOM(document.body, function(m){m.forEach(record => record.addedNodes.length & record.addedNodes.forEach(recordNodeUpdate))})
-updateBody()
-waitForElm('#endpoint[title=Shorts]').then((elm) => {
-	elm.onclick = function(event) {
-		event.preventDefault()
-		window.location.replace(window.location.origin + "/hashtag/shorts")
+	for (var i = 0; i < anchors.length; i++) {
+		var anchor = anchors[i]
+		var href = anchor.href;
+		if (href.includes("/watch?v=")) {
+			var root = anchor.closest('ytd-video-renderer')
+			if (root) {
+				if (root.querySelector('ytd-thumbnail-overlay-time-status-renderer[overlay-style=DEFAULT]')) {
+					anchor.onclick = () => void 0
+				}
+			}
+		}
+		if (href.includes("/shorts/")) {
+			var video_link = href.split('/')
+			var length = video_link.length
+			var link = "/watch?v=" + video_link[length-1]
+			anchor.href = link
+			anchor.onclick = function(event) {
+				event.preventDefault()
+				anchor.href = link
+				window.location.replace(window.location.origin + link)
+			}
+		}
 	}
-})
+}
+function recordNodeUpdates(maxUpdates, callback) {
+	var numberOfUpdates = 0
+	createObserver((m) => {
+		m.forEach(record => {numberOfUpdates += record.addedNodes.length})
+		if (numberOfUpdates > maxUpdates - 1) {updateBody(); numberOfUpdates = 0; callback()}
+	}, document.body, {childList:true, subtree:true})
+}
+if (getMutationObserver()) {
+	const maxUpdates = 200
+	var lastElementUpdate = 0
+	var lastIntervalUpdate = 0;
+	onURLChange(); onWindowLoad()
+	updateBody()
+	recordNodeUpdates(maxUpdates, () => {lastElementUpdate = Date.now()})
+	setInterval(()=>{
+		var elTime = Date.now() - lastElementUpdate
+		var inTime = Date.now() - lastIntervalUpdate
+		if (elTime > 1 && inTime > elTime) {
+			lastIntervalUpdate = Date.now()
+			updateBody()
+		}
+	}, 500)
+	waitForElm('#endpoint[title=Shorts]').then((elm) => {
+		elm.onclick = function(event) {
+			event.preventDefault()
+			window.location.replace(window.location.origin + "/hashtag/shorts")
+		}
+	})
+}
