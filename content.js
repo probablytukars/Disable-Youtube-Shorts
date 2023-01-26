@@ -32,9 +32,20 @@ function updateLinks() {
       anchor.href = `/watch?v=${videoId}`;
       anchor.onclick = function (event) {
         event.preventDefault();
-        window.location.replace(`${window.location.origin}/watch?v=${videoId}`);
+        window.location.replace(
+          `${window.location.origin}/watch?v=${videoId}`,
+          true
+        );
       };
     }
+  }
+
+  const elements = document.querySelectorAll("#endpoint[title='Shorts']");
+  for (const element of elements) {
+    element.onclick = function (event) {
+      event.preventDefault();
+      window.location.replace(`${window.location.origin}/hashtag/shorts`, true);
+    };
   }
 }
 
